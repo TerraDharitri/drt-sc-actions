@@ -2,15 +2,18 @@
 
 A Github Action for smart contracts which:
 - builds the wasm files
-- runs both the rust and go testing scenarios
+- runs mandos-rs and mandos-go tests
 - does a clippy check
 - provides a report containing details about the smart contracts
 
-## Usage of `contracts.yml`
+## Usage
 
 ### Standard build
 
-Create a new file under `.github/workflows/actions.yml` with the following contents:
+See [contracts.yml](.github/workflows/contracts.yml)
+This uses fixed versions of rust and vmtools.
+Ignores `eei` checks which allows the contracts to use features which are not live on the numbat mainnet yet.
+
 ```yml
 name: CI
 
@@ -27,17 +30,14 @@ permissions:
 jobs:
   contracts:
     name: Contracts
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/contracts.yml@vMajor.Minor.Patch
+    uses: TerraDharitri/drt-sc-actions/.github/workflows/contracts.yml@v1
     with:
-      rust-toolchain: nightly-2023-12-11
+      rust-toolchain: nightly-2022-01-17
+      vmtools-version: v1.4.43
+      extra-build-args: --ignore-eei-checks
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
 ```
-
-Preferably use the latest version available from here: https://github.com/TerraDharitri/drt-sc-actions/releases.
-
-This uses a fixed version of rust.
-See [contracts.yml](.github/workflows/contracts.yml) for more details on which other arguments are supported.
 
 ### Main branch notes
 
@@ -65,102 +65,18 @@ permissions:
 
 ## Additional options
 
-## Usage of `reproducible-build.yml`
+### Using a custom drtpy version
 
-See [reproducible-build.yml](.github/workflows/reproducible-build.yml).
-
-## Configuration entries
-
-The following configuration entries are available:
-
- - `image_tag`: the desired Docker image tag to be used for the reproducible contract build. The available tags are listed [here](https://hub.docker.com/r/terradharitri/sdk-rust-contract-builder/tags).
- - `project_path`: the path to the project (workspace) containing the contracts to build. If not specified, the repository folder is used.
- - `contract_name`: a specific contract to be built. If not specified, all contracts in the workspace (repository) are built.
- - `create_release`: whether to create a new release (and upload the build artifacts as assets).
- - `attach_to_existing_release`: whether to upload the build artifacts on an existing release. This only works if the current `github.ref_name` (of the executing workflow) is associated with an existing release.
-
-Note that `create_release` and `attach_to_existing_release` are mutually exclusive.
-
-## Creating a release from scratch
-
-At times, you might want to create a release directly from a Github Workflow. In order to do so, follow this example:
-
-```
-name: Create release, build contracts, upload assets
-
-on:
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-jobs:
-  build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
-    with:
-      image_tag: v1.2.3 # this is an example; see above
-      create_release: true
+The drtpy version can be specified by providing:
+```yml
+pip-drtpy-args: drtpy==1.2.3
 ```
 
-### Building on an existing release
+### Installing libtinfo5
 
-In order to configure your workflow for building the contracts and uploading the output on a newly created (published) release, do as follows:
-
+When building smart contracts written in C, on ubuntu, the libtinfo5 has to be installed as clang requires this.
+This can be optionally enabled by specifying:
+```yml
+install-libtinfo5: true
 ```
-name: On new release, build contracts, upload assets
-
-permissions:
-  contents: write
-
-on:
-  release:
-    types: [published]
-
-jobs:
-  build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
-    with:
-      image_tag: v1.2.3 # this is an example; see above
-      attach_to_release: true
-```
-
-### Running reproducible builds on pull requests
-
-In order to run the reproducible builds on a pull request, without creating or editing a GitHub release, do as follows:
-
-```
-name: Build contracts
-
-on:
-  pull_request:
-
-permissions:
-  contents: write
-
-jobs:
-  build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
-    with:
-      image_tag: v1.2.3 # this is an example; see above
-```
-
-Once the workflow finishes, the build artifacts will be found as workflow artifacts.
-
-Now, let's select a single contract to be built:
-
-```
-name: Build contracts
-
-on:
-  pull_request:
-
-permissions:
-  contents: write
-
-jobs:
-  build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
-    with:
-      image_tag: v1.2.3 # this is an example; see above
-      contract_name: adder
-```
+Note: if using a matrix build with multiple operating systems, enable this only for ubuntu.
