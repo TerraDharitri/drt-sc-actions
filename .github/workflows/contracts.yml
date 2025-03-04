@@ -23,6 +23,21 @@ on:
         default: ''
         required: false
         type: string
+      wasm-tests-args:
+        description: 'wasm tests arguments'
+        default: '--features numbat-wasm-debug/denali-go-tests'
+        required: false
+        type: string
+      clippy-args:
+        description: 'cargo clippy arguments'
+        default: '--all-targets --all-features'
+        required: false
+        type: string
+      install-libtinfo5:
+        description: 'install libtinfo5'
+        default: false
+        required: false
+        type: boolean
     secrets:
       token:
         description: 'Github token'
@@ -33,7 +48,7 @@ jobs:
     name: Wasm tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install rust
         uses: actions-rs/toolchain@v1
@@ -55,17 +70,23 @@ jobs:
 
           cargo install twiggy
 
+      - name: Install libtinfo5
+        if: inputs.install-libtinfo5
+        run: |
+          sudo apt update
+          sudo apt install -y libtinfo5
+
       - name: Build the wasm contracts
         run: drtpy contract build -r ${{ inputs.extra-build-args }}
 
       - name: Run the wasm tests
-        run: cargo test --features numbat-wasm-debug/denali-go-tests
+        run: cargo test ${{ inputs.wasm-tests-args }}
 
       - name: Generate the contract report
         run: drtpy contract report --skip-build --output-format json --output-file report.json
 
       - name: Upload the report json
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: report
           path: report.json
@@ -104,7 +125,7 @@ jobs:
             head: ${{ github.event.pull_request.head.sha }}
 
       - name: Upload the report markdown
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: github.event_name == 'pull_request'
         with:
           name: report-markdown
@@ -132,7 +153,7 @@ jobs:
     name: Rust tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           default: true
@@ -145,7 +166,7 @@ jobs:
     name: Clippy linter check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ inputs.rust-toolchain }}
@@ -154,3 +175,4 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.token }}
+          args: ${{ inputs.clippy-args }}
