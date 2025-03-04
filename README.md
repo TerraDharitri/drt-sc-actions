@@ -1,4 +1,4 @@
-# Github Actions for smart contracts
+# Github Actions for smart contracts V1
 
 A Github Action for smart contracts which:
 - builds the wasm files
