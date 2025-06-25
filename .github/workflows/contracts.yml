@@ -10,7 +10,7 @@ on:
         type: string
       pip-drtpy-args:
         description: 'pip drtpy install arguments'
-        default: 'dharitri-sdk-cli==v9.7.0'
+        default: 'dharitri-sdk-cli==v0..0.2'
         required: false
         type: string
       sc-meta-version:
