@@ -15,7 +15,7 @@ on:
         type: string
       pip-drtpy-args:
         description: 'pip drtpy install arguments'
-        default: 'dharitri-sdk-cli==v0.0.2'
+        default: 'dharitri-sdk-cli==v6.0.0'
         required: false
         type: string
       clippy-args:
@@ -28,6 +28,16 @@ on:
         default: false
         required: false
         type: boolean
+      binaryen-version:
+        description: 'binaryen (wasm-opt) version to use'
+        default: 'version_112'
+        required: false
+        type: string
+      wabt-version:
+        description: 'wabt version to use'
+        default: '1.0.27-1'
+        required: false
+        type: string
     secrets:
       token:
         description: 'Github token'
@@ -47,19 +57,28 @@ jobs:
           target: wasm32-unknown-unknown
 
       - name: Setup the PATH variable
-        run: echo "PATH=$HOME/.local/bin:$HOME/dharitri-sdk/vmtools:$PATH" >> $GITHUB_ENV
+        run: |
+          echo "PATH=$HOME/.local/bin:$HOME/dharitri-sdk/vmtools:$PATH" >> $GITHUB_ENV
 
       - name: Install prerequisites
         run: |
           pip3 install ${{ inputs.pip-drtpy-args }}
           mkdir $HOME/dharitri-sdk
           python3 -m dharitri_sdk_cli.cli deps install vmtools --tag ${{ inputs.vmtools-version }}
-          sudo apt install -y binaryen=105-1
-          sudo apt install -y wabt=1.0.27-1
+          
+          wget -O binaryen.tar.gz https://github.com/WebAssembly/binaryen/releases/download/${{ inputs.binaryen-version }}/binaryen-${{ inputs.binaryen-version }}-x86_64-linux.tar.gz
+          tar -xf binaryen.tar.gz
+          cp binaryen-${{ inputs.binaryen-version }}/bin/wasm-opt $HOME/.local/bin
+
+          sudo apt install -y wabt=${{ inputs.wabt-version }}
 
           cargo install twiggy
 
           cargo install dharitri-sc-meta
+
+          which wasm-opt
+          which wasm2wat
+          which run-scenarios
 
       - name: Install libtinfo5
         if: inputs.install-libtinfo5
