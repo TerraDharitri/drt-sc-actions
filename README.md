@@ -110,9 +110,9 @@ permissions:
 
 jobs:
   build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
+    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.1.0
     with:
-      image_tag: v1.2.3 # this is an example; see above
+      image_tag: v4.1.0
       create_release: true
 ```
 
@@ -132,9 +132,9 @@ on:
 
 jobs:
   build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
+    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.1.0
     with:
-      image_tag: v1.2.3 # this is an example; see above
+      image_tag: v4.1.0
       attach_to_release: true
 ```
 
@@ -153,9 +153,9 @@ permissions:
 
 jobs:
   build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
+    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.1.0
     with:
-      image_tag: v1.2.3 # this is an example; see above
+      image_tag: v4.1.0
 ```
 
 Once the workflow finishes, the build artifacts will be found as workflow artifacts.
@@ -173,8 +173,8 @@ permissions:
 
 jobs:
   build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
+    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.1.0
     with:
-      image_tag: v1.2.3 # this is an example; see above
+      image_tag: v4.1.0
       contract_name: adder
 ```

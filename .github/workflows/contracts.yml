@@ -15,7 +15,7 @@ on:
         type: string
       pip-drtpy-args:
         description: 'pip drtpy install arguments'
-        default: 'dharitri-sdk-cli==v0.0.2
+        default: 'dharitri-sdk-cli'
         required: false
         type: string
       clippy-args:
@@ -41,21 +41,24 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
+          default: true
           toolchain: ${{ inputs.rust-toolchain }}
           target: wasm32-unknown-unknown
 
       - name: Setup the PATH variable
-        run: echo "PATH=$HOME/.local/bin:$HOME/dharitri-sdk/vmtools:$PATH" >> $GITHUB_ENV
+        run: echo "PATH=$HOME/.local/bin:$HOME/dharitri-sdk/vmtools:$HOME/dharitri-sdk/nodejs/latest/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install prerequisites
         run: |
           pip3 install ${{ inputs.pip-drtpy-args }}
           mkdir $HOME/dharitri-sdk
-          python3 -m dharitri_sdk_cli.cli deps install vmtools --tag ${{ inputs.vmtools-version }}
-          sudo apt install -y binaryen=105-1
-          sudo apt install -y wabt=1.0.27-1
+          drtpy deps install vmtools --tag ${{ inputs.vmtools-version }}
+
+          drtpy deps install nodejs
+          drtpy deps install wasm-opt
 
           cargo install twiggy
 
@@ -68,22 +71,15 @@ jobs:
           sudo apt install -y libtinfo5
 
       - name: Build the wasm contracts
-        env:
-          RUSTFLAGS: ""
         run: sc-meta all build --no-imports --target-dir $(pwd)/target --path .
 
       - name: Run the wasm tests
-        env:
-          RUSTFLAGS: ""
-        run:
-          cargo test --features dharitri-sc-scenario/run-go-tests
+        run: cargo test --features dharitri-sc-scenario/run-go-tests
 
       - name: Generate the contract report
-        env:
-          RUSTFLAGS: ""
         run: |
           sc-meta all build-dbg --twiggy-paths --target-dir $(pwd)/target --path .
-          python3 -m dharitri_sdk_cli.cli contract report --skip-build --skip-twiggy --output-format json --output-file report.json
+          drtpy contract report --skip-build --skip-twiggy --output-format json --output-file report.json
 
       - name: Upload the report json
         uses: actions/upload-artifact@v4
@@ -108,15 +104,15 @@ jobs:
           if [ ! -f base-report/report.json ]
           then
               echo ":warning: Warning: Could not download the report for the base branch. Displaying only the report for the current branch. :warning:" >> report.md
-              python3 -m dharitri_sdk_cli.cli contract report --compare report.json --output-format github-markdown --output-file report-table.md
+              drtpy contract report --compare report.json --output-format github-markdown --output-file report-table.md
           else
-              python3 -m dharitri_sdk_cli.cli contract report --compare base-report/report.json report.json --output-format github-markdown --output-file report-table.md
+              drtpy contract report --compare base-report/report.json report.json --output-format github-markdown --output-file report-table.md
           fi
           cat report-table.md >> report.md
 
       - name: Render the report from the template
         id: template
-        uses: chuhlomin/render-template@v1
+        uses: chuhlomin/render-template@v1.2
         if: github.event_name == 'pull_request'
         with:
           template: report.md
@@ -133,7 +129,7 @@ jobs:
 
       - name: Find the comment containing the report
         id: fc
-        uses: peter-evans/find-comment@v2
+        uses: peter-evans/find-comment@v1
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -141,7 +137,7 @@ jobs:
           body-includes: 'Contract comparison'
 
       - name: Create or update the report comment
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@v1
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
@@ -154,28 +150,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
+          default: true
           toolchain: ${{ inputs.rust-toolchain }}
 
       - name: Run the rust tests
-        env:
-          RUSTFLAGS: ""
-        run:
-          cargo test
+        run: cargo test
 
   clippy_check:
     name: Clippy linter check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ inputs.rust-toolchain }}
           components: clippy
-      - uses: giraffate/clippy-action@v1
-        env:
-          RUSTFLAGS: ""
+          default: true
+      - uses: actions-rs/clippy-check@v1
         with:
-          github_token: ${{ secrets.token }}
-          clippy_flags: ${{ inputs.clippy-args }}
+          token: ${{ secrets.token }}
+          args: ${{ inputs.clippy-args }}
