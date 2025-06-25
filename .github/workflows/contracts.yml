@@ -8,11 +8,6 @@ on:
         default: 'nightly'
         required: false
         type: string
-      pip-drtpy-args:
-        description: 'pip drtpy install arguments'
-        default: 'dharitri-sdk-cli==v0..0.2'
-        required: false
-        type: string
       sc-meta-version:
         description: 'dharitri-sc-meta version'
         default: ''
@@ -43,11 +38,6 @@ on:
         default: '--output ./coverage.md'
         required: false
         type: string
-      binaryen-version:
-        description: 'binaryen (wasm-opt) version to use'
-        default: 'version_112'
-        required: false
-        type: string
       wabt-version:
         description: 'wabt version to use'
         default: '1.0.27-1'
@@ -73,12 +63,6 @@ jobs:
 
       - name: Install prerequisites
         run: |
-          pipx install ${{ inputs.pip-drtpy-args }}
-
-          wget -O binaryen.tar.gz https://github.com/WebAssembly/binaryen/releases/download/${{ inputs.binaryen-version }}/binaryen-${{ inputs.binaryen-version }}-x86_64-linux.tar.gz
-          tar -xf binaryen.tar.gz
-          cp binaryen-${{ inputs.binaryen-version }}/bin/wasm-opt $HOME/.local/bin
-
           sudo apt install -y wabt=${{ inputs.wabt-version }}
 
           cargo install wasm-opt
@@ -101,7 +85,6 @@ jobs:
               sc-meta install drt-go-scenario --tag ${{ inputs.drt-go-scenario-version }}
           fi
 
-          which drtpy
           which wasm-opt
           which drt-go-scenario
 
@@ -115,14 +98,6 @@ jobs:
           RUSTFLAGS: ""
         run: cargo test --features dharitri-sc-scenario/run-go-tests
 
-      - name: Generate the contract report via drtpy
-        if: ${{ inputs.enable-contracts-size-report }}
-        env:
-          RUSTFLAGS: ""
-        run: |
-          sc-meta all build-dbg --twiggy-paths --target-dir $(pwd)/target --path .
-          drtpy contract report --skip-build --skip-twiggy --output-format json --output-file drtpy_report.json  
-          
       - name: Generate the contract report via sc-meta
         if: ${{ inputs.enable-contracts-size-report }}
         env:
@@ -130,13 +105,6 @@ jobs:
         run: |
           sc-meta report compile --path . --output report.json
 
-      - name: Upload the report json from drtpy
-        if: ${{ inputs.enable-contracts-size-report }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: drtpy_report
-          path: drtpy_report.json      
-          
       - name: Upload the report json from sc-meta
         if: ${{ inputs.enable-contracts-size-report }}
         uses: actions/upload-artifact@v4

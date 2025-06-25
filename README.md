@@ -65,13 +65,6 @@ permissions:
 
 ## Additional options
 
-### Using a custom drtpy version
-
-The drtpy version can be specified by providing:
-```yml
-pip-drtpy-args: dharitri-sdk-cli==1.2.3
-```
-
 ## Usage of `reproducible-build.yml`
 
 See [reproducible-build.yml](.github/workflows/reproducible-build.yml).
