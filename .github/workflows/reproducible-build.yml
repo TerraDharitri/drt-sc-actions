@@ -128,7 +128,7 @@ jobs:
             flag_package_whole_project_src="--package-whole-project-src"
           fi
           
-          python3 ./build_with_docker.py --no-docker-tty --terradharitri/sdk-rust-contract-builder:${{ inputs.image_tag }} --project=${{ inputs.project_path }} --contract=${{ inputs.contract_name }} --output=/home/runner/work/output-from-docker ${flag_package_whole_project_src}
+          python3 ./build_with_docker.py --no-docker-tty --image=terradharitri/sdk-rust-contract-builder:${{ inputs.image_tag }} --project=${{ inputs.project_path }} --contract=${{ inputs.contract_name }} --output=/home/runner/work/output-from-docker ${flag_package_whole_project_src}
       
       - name: Save artifacts
         uses: actions/upload-artifact@v4
@@ -176,7 +176,7 @@ jobs:
             existing_notes = ""
 
           notes = existing_notes + "\n\n"
-          notes += "Built using Docker image: **terradharitri/sdk-rust-contract-builder:${{ inputs.image_tag }}**.\n"
+          notes += "Built using Docker image: ** terradharitri/sdk-rust-contract-builder:${{ inputs.image_tag }}**.\n"
           notes += "\n"
           notes+= "## Codehashes (blake2b):\n"
 

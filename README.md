@@ -27,7 +27,7 @@ permissions:
 jobs:
   contracts:
     name: Contracts
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/contracts.yml@vMajor.Minor.Patch
+     uses: TerraDharitri/drt-sc-actions/.github/workflows/contracts.yml@vMajor.Minor.Patch
     with:
       rust-toolchain: nightly-2023-12-11
     secrets:
@@ -103,7 +103,7 @@ permissions:
 
 jobs:
   build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
+     uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
     with:
       image_tag: v1.2.3 # this is an example; see above
       create_release: true
@@ -125,7 +125,7 @@ on:
 
 jobs:
   build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
+     uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
     with:
       image_tag: v1.2.3 # this is an example; see above
       attach_to_release: true
@@ -146,7 +146,7 @@ permissions:
 
 jobs:
   build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
+     uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
     with:
       image_tag: v1.2.3 # this is an example; see above
 ```
@@ -166,7 +166,7 @@ permissions:
 
 jobs:
   build:
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
+     uses: TerraDharitri/drt-sc-actions/.github/workflows/reproducible-build.yml@v2.2.1
     with:
       image_tag: v1.2.3 # this is an example; see above
       contract_name: adder
