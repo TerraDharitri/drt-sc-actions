@@ -6,7 +6,7 @@ on:
       image_tag:
         type: string
         required: true
-        description: Image terradharitri/sdk-rust-contract-builder
+        description: Image TerraDharitri/sdk-rust-contract-builder
       project_path:
         type: string
         default: '.'
@@ -62,7 +62,7 @@ jobs:
             logging.warning("You should never set 'skip_preliminary_checks', unless you really know what you are doing!")
 
           if image_tag == "next":
-            logging.warning("You've chosen to build the contracts with the image 'terradharitri/sdk-rust-contract-builder:next', which is experimental and not recommended for production!")
+            logging.warning("You've chosen to build the contracts with the image 'TerraDharitri/sdk-rust-contract-builder:next', which is experimental and not recommended for production!")
 
           if contract_name:
             logging.info(f"One contract will be built: {contract_name}.")
@@ -80,7 +80,7 @@ jobs:
           package_whole_project_src: ${{ inputs.package_whole_project_src }}
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           ref: ${{ env.GITHUB_REF_NAME }}
           fetch-depth: 0
@@ -128,10 +128,10 @@ jobs:
             flag_package_whole_project_src="--package-whole-project-src"
           fi
           
-          python3 ./build_with_docker.py --no-docker-tty --image=terradharitri/sdk-rust-contract-builder:${{ inputs.image_tag }} --project=${{ inputs.project_path }} --contract=${{ inputs.contract_name }} --output=/home/runner/work/output-from-docker ${flag_package_whole_project_src}
+          python3 ./build_with_docker.py --no-docker-tty --image=TerraDharitri/sdk-rust-contract-builder:${{ inputs.image_tag }} --project=${{ inputs.project_path }} --contract=${{ inputs.contract_name }} --output=/home/runner/work/output-from-docker ${flag_package_whole_project_src}
       
       - name: Save artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-output
           path: |
@@ -176,7 +176,7 @@ jobs:
             existing_notes = ""
 
           notes = existing_notes + "\n\n"
-          notes += "Built using Docker image: ** terradharitri/sdk-rust-contract-builder:${{ inputs.image_tag }}**.\n"
+          notes += "Built using Docker image: **TerraDharitri/sdk-rust-contract-builder:${{ inputs.image_tag }}**.\n"
           notes += "\n"
           notes+= "## Codehashes (blake2b):\n"
 

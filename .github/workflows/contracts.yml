@@ -1,307 +1,172 @@
-name: Contracts builds and tests
+name: DharitrI Full Suite
 
 on:
   workflow_call:
     inputs:
       rust-toolchain:
-        description: 'Rust toolchain to use'
-        default: 'nightly'
+        description: "Rust toolchain to use"
+        default: "stable"
         required: false
         type: string
-      sc-meta-hash-git:
-        description: 'dharitri-sc-meta git commit hash'
-        default: ''
+      runs-on:
+        description: "The type of machine to run all the jobs on"
+        default: "ubuntu-latest"
+        required: false
+        type: string
+      setup-runs-on:
+        description: "The type of machine to run the setup job on"
+        required: false
+        type: string
+      wasm-test-runs-on:
+        description: "The type of machine to run the Wasm Tests job on"
+        required: false
+        type: string
+      interactor-tests-runs-on:
+        description: "The type of machine to run the Interactor Tests job on"
+        required: false
+        type: string
+      test-coverage-runs-on:
+        description: "The type of machine to run the Test Coverage job on"
+        required: false
+        type: string
+      rust-target:
+        description: "Rust target to use"
+        default: "wasm32-unknown-unknown"
         required: false
         type: string
       sc-meta-version:
-        description: 'dharitri-sc-meta version'
-        default: ''
+        description: "dharitri-sc-meta version"
+        default: ""
         required: false
         type: string
       drt-go-scenario-version:
-        description: 'sc-scenario-go version'
-        default: ''
+        description: "sc-go-scenario version"
+        default: ""
+        required: false
+        type: string
+      wasm-opt-version:
+        description: "The wasm-opt version to use"
+        default: "108"
         required: false
         type: string
       path-to-sc-meta:
-        description: 'dharitri-sc-meta from local'
-        default: ''
+        description: "dharitri-sc-meta from local"
+        default: ""
         required: false
         type: string
       clippy-args:
-        description: 'cargo clippy arguments'
-        default: '--all-targets --all-features'
+        description: "cargo clippy arguments"
+        default: "--all-targets --all-features"
         required: false
         type: string
       enable-contracts-size-report:
-        description: 'Enable contracts size report'
+        description: "Enable contracts size report"
         default: true
         required: false
         type: boolean
       enable-interactor-tests:
-        description: 'Enable interactor tests'
+        description: "Enable interactor tests"
         default: false
         required: false
         type: boolean
+      enable-proxy-compare:
+        description: "Enable proxy compare check"
+        default: true
+        required: false
+        type: boolean
       coverage-args:
-        description: 'sc-meta test-coverage arguments'
-        default: '--output ./coverage.md'
+        description: "sc-meta test-coverage arguments"
+        default: "--output ./coverage.md"
         required: false
         type: string
     secrets:
       token:
-        description: 'Github token'
+        description: "Github token"
         required: true
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  wasm_test:
+  setup:
+    name: Setup Environment
+    uses: ./.github/workflows/setup.yml
+    with:
+      rust-toolchain: ${{ inputs.rust-toolchain }}
+      runs-on: ${{ inputs.setup-runs-on || inputs.runs-on }}
+      rust-target: ${{ inputs.rust-target }}
+      sc-meta-version: ${{ inputs.sc-meta-version }}
+      drt-go-scenario-version: ${{ inputs.drt-go-scenario-version }}
+      wasm-opt-version: ${{ inputs.wasm-opt-version }}
+      path-to-sc-meta: ${{ inputs.path-to-sc-meta }}
+
+  build-contracts:
+    name: Build Contracts
+    needs: setup
+    uses: ./.github/workflows/build-contracts.yml
+    with:
+      rust-toolchain: ${{ inputs.rust-toolchain }}
+      runs-on: ${{ inputs.runs-on }}
+      rust-target: ${{ inputs.rust-target }}
+
+  wasm-tests:
     name: Wasm tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
+    needs: build-contracts
+    uses: ./.github/workflows/wasm-tests.yml
+    with:
+      rust-toolchain: ${{ inputs.rust-toolchain }}
+      runs-on: ${{ inputs.wasm-test-runs-on || inputs.runs-on }}
 
-      - name: Install rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: ${{ inputs.rust-toolchain }}
-          target: wasm32-unknown-unknown
-
-      - name: Install prerequisites
-        run: |
-          cargo install wasm-opt
-          cargo install twiggy
-
-          if [[ "${{ inputs.path-to-sc-meta }}" ]];
-          then
-              cargo install --path ${{ inputs.path-to-sc-meta }}
-          elif [[ -z "${{ inputs.sc-meta-version }}" ]];
-          then
-              cargo install dharitri-sc-meta --locked
-          else
-              cargo install dharitri-sc-meta --version ${{ inputs.sc-meta-version }} --locked
-          fi
-
-          if [[ -z "${{ inputs.drt-go-scenario-version }}" ]];
-          then
-              sc-meta install drt-go-scenario
-          else
-              sc-meta install drt-go-scenario --tag ${{ inputs.drt-go-scenario-version }}
-          fi
-
-          which wasm-opt
-          which drt-go-scenario
-
-      - name: Build the wasm contracts
-        env:
-          RUSTFLAGS: ""
-        run: sc-meta all build --no-imports --target-dir $(pwd)/target --path .
-
-      - name: Run the wasm tests
-        env:
-          RUSTFLAGS: ""
-        run: cargo test --features dharitri-sc-scenario/run-go-tests
-
-      - name: Generate the contract report
-        if: ${{ inputs.enable-contracts-size-report }}
-        env:
-          RUSTFLAGS: ""
-        run: |
-          sc-meta report compile --path . --output report.json
-
-      - name: Upload the report json
-        if: ${{ inputs.enable-contracts-size-report }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: report
-          path: report.json
-
-      - name: Download the base report
-        uses: dawidd6/action-download-artifact@v2
-        if: ${{ github.event_name == 'pull_request' && inputs.enable-contracts-size-report }}
-        continue-on-error: true
-        with:
-          workflow: actions.yml
-          name: report
-          commit: ${{ github.event.pull_request.base.sha }}
-          path: base-report
-
-      - name: Generate the report template
-        if: ${{ github.event_name == 'pull_request'  && inputs.enable-contracts-size-report }}
-        run: |
-          echo "Contract comparison - from {{ .base }} to {{ .head }}" > report.md
-          sc-meta report compare --baseline base-report/report.json --new report.json --output report-table.md
-          cat report-table.md >> report.md
-
-      - name: Render the report from the template
-        id: template
-        uses: chuhlomin/render-template@v1
-        if: ${{ github.event_name == 'pull_request' && inputs.enable-contracts-size-report }}
-        with:
-          template: report.md
-          vars: |
-            base: ${{ github.event.pull_request.base.sha }}
-            head: ${{ github.event.pull_request.head.sha }}
-
-      - name: Upload the report markdown
-        uses: actions/upload-artifact@v4
-        if: ${{ github.event_name == 'pull_request' && inputs.enable-contracts-size-report }}
-        with:
-          name: report-markdown
-          path: report.md
-
-      - name: Find the comment containing the report
-        id: fc
-        uses: peter-evans/find-comment@v2
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository  && inputs.enable-contracts-size-report }}
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: 'Contract comparison'
-
-      - name: Create or update the report comment
-        uses: peter-evans/create-or-update-comment@v2
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository  && inputs.enable-contracts-size-report }}
-        with:
-          comment-id: ${{ steps.fc.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: ${{ steps.template.outputs.result }}
-          edit-mode: replace
-
-  interactor_tests:
+  interactor-tests:
     name: Interactor tests
-    runs-on: ubuntu-latest
+    needs: build-contracts
     if: inputs.enable-interactor-tests
-    steps:
-      - uses: actions/checkout@v3
+    uses: ./.github/workflows/interactor-tests.yml
+    with:
+      rust-toolchain: ${{ inputs.rust-toolchain }}
+      runs-on: ${{ inputs.interactor-tests-runs-on || inputs.runs-on }}
 
-      - name: Install rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: ${{ inputs.rust-toolchain }}
-          target: wasm32-unknown-unknown
+  generate-report:
+    name: Generate Report
+    needs: build-contracts
+    if: inputs.enable-contracts-size-report
+    uses: ./.github/workflows/report.yml
+    with:
+      rust-toolchain: ${{ inputs.rust-toolchain }}
+      runs-on: ${{ inputs.runs-on }}
 
-      - name: Install prerequisites
-        run: |
-          cargo install wasm-opt
-          cargo install twiggy
+  proxy-compare:
+    name: Proxy Compare
+    needs: setup
+    if: inputs.enable-proxy-compare
+    uses: ./.github/workflows/proxy-compare.yml
+    with:
+      rust-toolchain: ${{ inputs.rust-toolchain }}
+      runs-on: ${{ inputs.runs-on }}
 
-          if [[ -n "${{ inputs.sc-meta-hash-git }}" ]];
-          then
-              git clone https://github.com/TerraDharitri/drt-rs-sdk.git sdk
-              cd sdk/ && git checkout ${{ inputs.sc-meta-hash-git }}
-              cargo install --path $(pwd)/framework/meta
-              cd .. && rm -rf sdk
-          elif [[ "${{ inputs.path-to-sc-meta }}" ]];
-          then
-              cargo install --path ${{ inputs.path-to-sc-meta }}
-          elif [[ -z "${{ inputs.sc-meta-version }}" ]];
-          then
-              cargo install dharitri-sc-meta --locked
-          else
-              cargo install dharitri-sc-meta --version ${{ inputs.sc-meta-version }} --locked
-          fi
-
-          which wasm-opt
-
-      - name: Build the wasm contracts
-        env:
-          RUSTFLAGS: ""
-        run: sc-meta all build --no-imports --target-dir $(pwd)/target --path .
-
-      - name: Pull latest chain simulator docker image
-        env:
-          RUSTFLAGS: ""
-        run: sc-meta cs install
-
-      - name: Run the interactor tests
-        continue-on-error: false  
-        env:
-          RUSTFLAGS: ""
-        run: sc-meta cs start & cargo test --features chain-simulator-tests
-
-      - name: Stop the chain simulator
-        env:
-          RUSTFLAGS: ""
-        run: sc-meta cs stop
-
-  test_coverage:
+  test-coverage:
     name: Test Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
+    needs: setup
+    uses: ./.github/workflows/coverage.yml
+    with:
+      rust-toolchain: ${{ inputs.rust-toolchain }}
+      runs-on: ${{ inputs.test-coverage-runs-on || inputs.runs-on }}
+      coverage-args: ${{ inputs.coverage-args }}
 
-      - name: Install rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: ${{ inputs.rust-toolchain }}
-          target: wasm32-unknown-unknown
-
-      - name: Install prerequisites
-        run: |
-          rustup component add llvm-tools-preview
-          dirname $(find ~/.rustup -name llvm-cov) >> $GITHUB_PATH
-
-          echo $(dirname $(find ~/.rustup -name llvm-cov))
-
-          if [[ "${{ inputs.path-to-sc-meta }}" ]];
-          then
-              cargo install --path ${{ inputs.path-to-sc-meta }}
-          elif [[ -z "${{ inputs.sc-meta-version }}" ]];
-          then
-              cargo install dharitri-sc-meta --locked
-          else
-              cargo install dharitri-sc-meta --version ${{ inputs.sc-meta-version }} --locked
-          fi
-
-      - name: Run tests and generate report
-        env:
-          RUSTFLAGS: ""
-        run: |
-          sc-meta test-coverage ${{ inputs.coverage-args }}
-
-      - name: Upload the report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage.md
-
-      - name: Find the comment containing the report
-        id: fc
-        uses: peter-evans/find-comment@v2
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: "github-actions[bot]"
-          body-includes: "Coverage Summary"
-
-      - name: Create or update the report comment
-        uses: peter-evans/create-or-update-comment@v2
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        with:
-          comment-id: ${{ steps.fc.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body-file: ./coverage.md
-          edit-mode: replace
-
-  rust_test:
+  rust-tests:
     name: Rust tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: ${{ inputs.rust-toolchain }}
+    uses: ./.github/workflows/rust-tests.yml
+    with:
+      rust-toolchain: ${{ inputs.rust-toolchain }}
+      runs-on: ${{ inputs.runs-on }}
 
-      - name: Run the rust tests
-        env:
-          RUSTFLAGS: ""
-        run: cargo test
-
-  clippy_check:
+  clippy-check:
     name: Clippy linter check
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: ${{ inputs.rust-toolchain }}
@@ -312,3 +177,4 @@ jobs:
         with:
           github_token: ${{ github.token }}
           clippy_flags: ${{ inputs.clippy-args }}
+

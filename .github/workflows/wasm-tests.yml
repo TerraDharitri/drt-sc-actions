@@ -1,0 +1,75 @@
+on:
+  workflow_call:
+    inputs:
+      rust-toolchain:
+        description: "Rust toolchain to use"
+        default: "stable"
+        required: false
+        type: string
+      runs-on:
+        description: "The type of machine to run the job on"
+        default: "ubuntu-latest"
+        required: false
+        type: string
+
+jobs:
+  wasm-tests:
+    name: Wasm tests
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+
+      - name: Create local tools directory
+        run: mkdir -p tools
+
+      - name: Download sc-meta artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: sc-meta-${{ github.run_id }}
+          path: tools
+
+      - name: Download drt-go-scenario artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: drt-go-scenario-${{ github.run_id }}
+          path: tools
+
+      - name: Set tools' path
+        run: |
+          tar -xvf tools/sc_meta.tar -C tools
+          tar -xvf tools/drt_go_scenario.tar -C tools
+
+          for tool in sc-meta drt-go-scenario wasm-opt; do
+            FOUND=$(find tools -name "$tool" -type f | head -n1)
+            if [ -n "$FOUND" ]; then
+              mv "$FOUND" tools/
+            fi
+          done
+
+          find tools -name "*.so" -type f -exec mv {} tools/ \;
+          find tools -name "*.a" -type f -exec mv {} tools/ \;
+          find tools -type d -empty -delete
+          echo "$(pwd)/tools" >> "$GITHUB_PATH"
+
+      - name: Download built contracts
+        uses: actions/download-artifact@v6
+        with:
+          name: built-contracts-${{ github.run_id }}
+          path: .
+
+      - name: Run the wasm tests
+        env:
+          RUSTFLAGS: ""
+        run: |
+          LD_LIBRARY_PATH="$(pwd)/tools"
+          export LD_LIBRARY_PATH
+          sc-meta test --go
+
+      - name: Cleanup
+        run: rm -rf tools
