@@ -77,7 +77,7 @@ jobs:
           then
               sc-meta install drt-go-scenario
           else
-              sc-meta install drt-go-scenario--tag ${{ inputs.drt-go-scenario-version }}
+              sc-meta install drt-go-scenario --tag ${{ inputs.drt-go-scenario-version }}
           fi
 
           which wasm-opt
@@ -85,7 +85,7 @@ jobs:
           which drt-go-scenario
 
           sc-meta --version
-          drt-go-scenario--version
+          drt-go-scenario --version
           wasm-opt --version
 
       - name: "Tar sc-meta"
