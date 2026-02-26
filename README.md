@@ -27,15 +27,14 @@ permissions:
 jobs:
   contracts:
     name: Contracts
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/contracts.yml@v2
+    uses: TerraDharitri/drt-sc-actions/.github/workflows/contracts.yml@v3
     with:
-      rust-toolchain: nightly-2022-12-08
-      vmtools-version: v1.4.60
+      rust-toolchain: nightly-2023-12-11
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-This uses fixed versions of rust and vmtools.
+This uses a fixed version of rust.
 See [contracts.yml](.github/workflows/contracts.yml) for more details on which other arguments are supported.
 
 ### Main branch notes
@@ -71,15 +70,6 @@ The drtpy version can be specified by providing:
 pip-drtpy-args: dharitri-sdk-cli==1.2.3
 ```
 
-### Installing libtinfo5
-
-When building smart contracts written in C, on ubuntu, the libtinfo5 has to be installed as clang requires this.
-This can be optionally enabled by specifying:
-```yml
-install-libtinfo5: true
-```
-Note: if using a matrix build with multiple operating systems, enable this only for ubuntu.
-
 ## Usage of `reproducible-build.yml`
 
 See [reproducible-build.yml](.github/workflows/reproducible-build.yml).
@@ -89,6 +79,7 @@ See [reproducible-build.yml](.github/workflows/reproducible-build.yml).
 The following configuration entries are available:
 
  - `image_tag`: the desired Docker image tag to be used for the reproducible contract build. The available tags are listed [here](https://hub.docker.com/r/TerraDharitri/sdk-rust-contract-builder/tags).
+ - `project_path`: the path to the project (workspace) containing the contracts to build. If not specified, the repository folder is used.
  - `contract_name`: a specific contract to be built. If not specified, all contracts in the workspace (repository) are built.
  - `create_release`: whether to create a new release (and upload the build artifacts as assets).
  - `attach_to_existing_release`: whether to upload the build artifacts on an existing release. This only works if the current `github.ref_name` (of the executing workflow) is associated with an existing release.
