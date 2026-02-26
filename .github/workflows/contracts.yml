@@ -38,6 +38,11 @@ on:
         default: true
         required: false
         type: boolean
+      enable-interactor-tests:
+        description: 'Enable interactor tests'
+        default: false
+        required: false
+        type: boolean
       coverage-args:
         description: 'sc-meta test-coverage arguments'
         default: '--output ./coverage.md'
@@ -96,16 +101,16 @@ jobs:
           RUSTFLAGS: ""
         run: cargo test --features dharitri-sc-scenario/run-go-tests
 
-      - name: Generate the contract report via sc-meta
+      - name: Generate the contract report
         if: ${{ inputs.enable-contracts-size-report }}
         env:
           RUSTFLAGS: ""
         run: |
           sc-meta report compile --path . --output report.json
 
-      - name: Upload the report json from sc-meta
+      - name: Upload the report json
         if: ${{ inputs.enable-contracts-size-report }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: report
           path: report.json
@@ -138,7 +143,7 @@ jobs:
             head: ${{ github.event.pull_request.head.sha }}
 
       - name: Upload the report markdown
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: ${{ github.event_name == 'pull_request' && inputs.enable-contracts-size-report }}
         with:
           name: report-markdown
@@ -165,6 +170,7 @@ jobs:
   interactor_tests:
     name: Interactor tests
     runs-on: ubuntu-latest
+    if: inputs.enable-interactor-tests
     steps:
       - uses: actions/checkout@v3
 
@@ -211,7 +217,7 @@ jobs:
         continue-on-error: false  
         env:
           RUSTFLAGS: ""
-        run: sc-meta cs start & sc-meta test -c
+        run: sc-meta cs start & cargo test --features chain-simulator-tests
 
       - name: Stop the chain simulator
         env:
@@ -254,7 +260,7 @@ jobs:
           sc-meta test-coverage ${{ inputs.coverage-args }}
 
       - name: Upload the report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage.md
