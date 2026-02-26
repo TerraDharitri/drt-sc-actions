@@ -15,17 +15,7 @@ on:
         type: string
       pip-drtpy-args:
         description: 'pip drtpy install arguments'
-        default: 'drtpy'
-        required: false
-        type: string
-      extra-build-args:
-        description: 'extra build arguments'
-        default: ''
-        required: false
-        type: string
-      wasm-tests-args:
-        description: 'wasm tests arguments'
-        default: '--features numbat-wasm-debug/denali-go-tests'
+        default: 'dharitri-sdk-cli'
         required: false
         type: string
       clippy-args:
@@ -53,22 +43,26 @@ jobs:
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           default: true
-          toolchain: "${{ inputs.rust-toolchain }}"
+          toolchain: ${{ inputs.rust-toolchain }}
+          target: wasm32-unknown-unknown
 
       - name: Setup the PATH variable
-        run: echo "PATH=$HOME/.local/bin:$HOME/numbatsdk/vmtools:$PATH" >> $GITHUB_ENV
+        run: echo "PATH=$HOME/.local/bin:$HOME/dharitri-sdk/vmtools:$HOME/dharitri-sdk/nodejs/latest/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install prerequisites
         run: |
           pip3 install ${{ inputs.pip-drtpy-args }}
-          mkdir $HOME/numbatsdk
+          mkdir $HOME/dharitri-sdk
           drtpy deps install vmtools --tag ${{ inputs.vmtools-version }}
 
           drtpy deps install nodejs
           drtpy deps install wasm-opt
 
           cargo install twiggy
+
+          cargo install dharitri-sc-meta
 
       - name: Install libtinfo5
         if: inputs.install-libtinfo5
@@ -77,13 +71,15 @@ jobs:
           sudo apt install -y libtinfo5
 
       - name: Build the wasm contracts
-        run: drtpy contract build -r ${{ inputs.extra-build-args }}
+        run: sc-meta all build --no-imports --target-dir $(pwd)/target --path .
 
       - name: Run the wasm tests
-        run: cargo test ${{ inputs.wasm-tests-args }}
+        run: cargo test --features dharitri-sc-scenario/run-go-tests
 
       - name: Generate the contract report
-        run: drtpy contract report --skip-build --output-format json --output-file report.json
+        run: |
+          sc-meta all build-dbg --twiggy-paths --target-dir $(pwd)/target --path .
+          drtpy contract report --skip-build --skip-twiggy --output-format json --output-file report.json
 
       - name: Upload the report json
         uses: actions/upload-artifact@v3
