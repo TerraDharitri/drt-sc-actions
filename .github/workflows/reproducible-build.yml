@@ -131,7 +131,7 @@ jobs:
           python3 ./build_with_docker.py --no-docker-tty --image=TerraDharitri/sdk-rust-contract-builder:${{ inputs.image_tag }} --project=${{ inputs.project_path }} --contract=${{ inputs.contract_name }} --output=/home/runner/work/output-from-docker ${flag_package_whole_project_src}
       
       - name: Save artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: build-output
           path: |
