@@ -27,12 +27,14 @@ permissions:
 jobs:
   contracts:
     name: Contracts
-    uses: TerraDharitri/drt-sc-actions/.github/workflows/contracts.yml@v3
+    uses: TerraDharitri/drt-sc-actions/.github/workflows/contracts.yml@vMajor.Minor.Patch
     with:
       rust-toolchain: nightly-2023-12-11
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+Preferably use the latest version available from here: https://github.com/TerraDharitri/drt-sc-actions/releases.
 
 This uses a fixed version of rust.
 See [contracts.yml](.github/workflows/contracts.yml) for more details on which other arguments are supported.
