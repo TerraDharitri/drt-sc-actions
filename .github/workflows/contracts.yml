@@ -47,14 +47,15 @@ jobs:
           target: wasm32-unknown-unknown
 
       - name: Setup the PATH variable
-        run: echo "PATH=$HOME/.local/bin:$HOME/dharitri-sdk/vmtools:$HOME/dharitri-sdk/wasm-opt/version_105:$PATH" >> $GITHUB_ENV
+        run: echo "PATH=$HOME/.local/bin:$HOME/dharitri-sdk/vmtools:$PATH" >> $GITHUB_ENV
 
       - name: Install prerequisites
         run: |
           pip3 install ${{ inputs.pip-drtpy-args }}
           mkdir $HOME/dharitri-sdk
           python3 -m dharitri_sdk_cli.cli deps install vmtools --tag ${{ inputs.vmtools-version }}
-          python3 -m dharitri_sdk_cli.cli deps install wasm-opt
+          sudo apt install -y binaryen=105-1
+          sudo apt install -y wabt=1.0.27-1
 
           cargo install twiggy
 
